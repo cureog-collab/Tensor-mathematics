@@ -30,28 +30,28 @@ void tensorRandomNormal(tensor *ten, double mean, double sigma);
 // ---------------------------------------------------------------------------------------------------------
 
 void tensorScale(tensor *ten, double scalar);
-bool tensorAdd(tensor *out, const tensor *ten1, const tensor *ten2, bool isAdd);
-bool tensorHadamardProduct(tensor *result, const tensor *ten1, const tensor *ten2);
-bool tensorRelu(tensor *result, const tensor *ten);
-bool tensorSigmoid(tensor *result, const tensor *ten);
-bool tensorTanh(tensor *result, const tensor *ten);
+tensor *tensorAdd(const tensor *ten1, const tensor *ten2, bool isAdd);
+tensor *tensorHadamardProduct(const tensor *ten1, const tensor *ten2);
+tensor *tensorRelu(const tensor *ten);
+tensor *tensorSigmoid(const tensor *ten);
+tensor *tensorTanh(const tensor *ten);
 
 // ---------------------------------------------------------------------------------------------------------
 
-bool tensorTranspose(tensor *result, const tensor *ten);
-bool tensorInverse(tensor *result, const tensor *ten);
-bool tensorMultiply(tensor *result, const tensor *ten1, const tensor *ten2);
+tensor *tensorTranspose(const tensor *ten, const int *axes);
+tensor *tensorInverse(const tensor *ten);
+tensor *tensorBatchedMultiply(const tensor *ten1, const tensor *ten2);
 
 // ---------------------------------------------------------------------------------------------------------
 
 double tensorSum(const tensor *ten);
 double tensorMean(const tensor *ten);
-bool tensorSumByAxis(tensor *result, const tensor *ten, int axis);
+tensor *tensorSumByAxis(const tensor *ten, int axis);
 
 // ---------------------------------------------------------------------------------------------------------
 
-bool tensorReshape(tensor *result, const tensor *ten, int *newShape, int *newDim);
-bool tensorFlatten(tensor *result, const tensor *ten);
+tensor *tensorReshape(const tensor *ten, int *newShape, int *newDim);
+tensor *tensorFlatten(const tensor *ten);
 // =========================================================================================================
 
 #endif

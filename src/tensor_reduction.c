@@ -2,4 +2,4 @@
 
 double tensorSum(const tensor *ten);
 double tensorMean(const tensor *ten);
-bool tensorSumByAxis(tensor *result, const tensor *ten, int axis);
+tensor *tensorSumByAxis(const tensor *ten, int axis);

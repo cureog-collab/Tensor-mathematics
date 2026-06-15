@@ -1,4 +1,4 @@
 #include "../include/main.h"
 
-bool tensorReshape(tensor *result, const tensor *ten, int *newShape, int *newDim);
-bool tensorFlatten(tensor *result, const tensor *ten);
+tensor *tensorReshape(const tensor *ten, int *newShape, int *newDim);
+tensor *tensorFlatten(const tensor *ten);
