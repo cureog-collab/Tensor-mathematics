@@ -3,4 +3,5 @@ tensor-mathematics
 *.o
 src/main.c
 build/
+obj/
 .DS_Store
