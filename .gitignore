@@ -1,5 +1,6 @@
 c_tensor
 tensor-mathematics
 *.o
+src/main.c
 build/
 .DS_Store

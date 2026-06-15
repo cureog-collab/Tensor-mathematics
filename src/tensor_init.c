@@ -1,5 +1,6 @@
 #include "../include/main.h"
 #include <stdlib.h>
+#include <string.h>
 
 double genNormalRandom(double mean, double sigma);
 
@@ -50,6 +51,38 @@ tensor *createTensor(int dim, const int *shape)
     outputTensor->dimensions = dim;
 
     return outputTensor;
+}
+
+tensor *copyTensor(const tensor *ten)
+{
+    tensor *result = malloc(sizeof(tensor));
+    if (result == NULL)
+    {
+        printf("Error: Failed to malloc for clone tensor!\n");
+        return NULL;
+    }
+
+    int dims = ten->dimensions;
+    result->shape = malloc(dims * sizeof(int));
+    if (result->shape == NULL)
+    {
+        printf("Error: Failed to malloc for clone tensor's shape!\n");
+        return NULL;
+    }
+
+    result->data = malloc(ten->size * sizeof(double));
+    if (result->data == NULL)
+    {
+        printf("Error: Failed to malloc for clone tensor's data!\n");
+        free(result->shape);
+        return NULL;
+    }
+
+    memcpy(result->shape, ten->shape, dims * sizeof(int));
+    memcpy(result->data, ten->data, ten->size * sizeof(double));
+    result->size = ten->size;
+    result->dimensions = dims;
+    return result;    
 }
 
 void destroyTensor(tensor *ten)

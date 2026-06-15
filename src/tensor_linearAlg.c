@@ -1,5 +1,8 @@
 #include "../include/main.h"
+#include <math.h>
 #include <stdlib.h>
+
+void matrixMultiply(tensor *result, const double *data1, const double *data2, int M, int K, int N, int batch);
 
 tensor *tensorTranspose(const tensor *ten, const int *axes)
 {
@@ -76,7 +79,7 @@ tensor *tensorTranspose(const tensor *ten, const int *axes)
     return result;
 }
 
-tensor *tensorBatchedMultiply(const tensor *ten1, const tensor *ten2)
+tensor *tensorMultiply(const tensor *ten1, const tensor *ten2)
 {
     // ten1->shape: {10, 5, 3, 4}
     // to be multiplicable: ten2->shape: {10, 5, 4, int N}
@@ -94,6 +97,46 @@ tensor *tensorBatchedMultiply(const tensor *ten1, const tensor *ten2)
         return NULL;
     }
     int dims = ten1->dimensions;
+
+
+    // if inputs are just matrices
+    if (dims == 2)
+    {
+        // perform ordinary matrix multiplication
+        int firstCols = ten1->shape[1];
+        int secondRows = ten2->shape[0];
+        if (secondRows != firstCols)
+        {
+            printf("Error: matrices not multiplicable!\n");
+            return NULL;
+        }
+        int firstRows = ten1->shape[0];
+        int secondCols = ten2->shape[1];
+
+        int *resultShape = malloc(2 * sizeof(int));
+        if (resultShape == NULL)
+        {
+            printf("Error: Failed to malloc for resultShape!\n");
+            return NULL;
+        }
+        resultShape[0] = firstRows;
+        resultShape[1] = secondCols;
+
+        tensor *result = createTensor(2, resultShape);
+        if (result == NULL)
+        {
+            printf("Error: Failed to malloc for result matrix!\n");
+            free(resultShape);
+            return NULL;
+        }
+        free(resultShape);
+        tensorFillZEROS(result);
+
+        matrixMultiply(result, ten1->data, ten2->data, firstRows, firstCols, secondCols, 0);
+        return result;
+    }
+
+    // if inputs are tensors of rank higher than 2
 
     // check batch dimensions (0..(dimensions - 3))
     for (int d = 0; d < dims - 2; ++d)
@@ -129,8 +172,6 @@ tensor *tensorBatchedMultiply(const tensor *ten1, const tensor *ten2)
     }
     resultShape[dims - 1] = secondCols;
     
-    // TẠO Tensor result với result_shape (Ví dụ result sẽ có shape {10, 5, 3, 6})
-    // ĐIỀN SỐ 0 CHO TOÀN BỘ result (Bắt buộc để cộng dồn)
     tensor *result = createTensor(dims, resultShape);
     if (result == NULL)
     {
@@ -149,35 +190,63 @@ tensor *tensorBatchedMultiply(const tensor *ten1, const tensor *ten2)
         totBatches *= ten1->shape[i];
     }
 
-    // // 2. Tính xem 1 ma trận con chiếm bao nhiêu ô nhớ trên RAM 1D
-    int sizeFirst = firstRows * firstCols;
-    int sizeSecond = secondRows * secondCols;
-    int sizeResult = firstRows * secondCols;
-
     // multiply each pair of matrices
     for (int b = 0; b < totBatches; ++b)
     {
-        // offset
-        int offsetFirst = b * sizeFirst;
-        int offsetSecond = b * sizeSecond;
-        int offsetResult = b * sizeResult;
-
-        // matrix multpiplication
-        for (int i = 0; i < firstRows; ++i)
-        {
-            for (int k = 0; k < firstCols; ++k)
-            {
-                for (int j = 0; j < secondCols; ++j)
-                {
-                    int indexFirst = offsetFirst + (i * firstCols + k);
-                    int indexSecond = offsetSecond + (k * secondCols + j);
-                    int indexResult = offsetResult + (i * secondCols + j);
-                    result->data[indexResult] += ten1->data[indexFirst] * ten2->data[indexSecond];
-                }
-            }
-        }
+        matrixMultiply(result, ten1->data, ten2->data, firstRows, firstCols, secondCols, b);
     }
     return result;
 }
 
-tensor *tensorInverse(const tensor *ten);
+// double matrixDet(const tensor *mat)
+// {
+//     // check if the inputs are actual matrices
+//     int dim = mat->dimensions;
+//     if (dim != 2)
+//     {
+//         printf("Error: Input is not a matrix but a rank-%i tensor!\n", dim);
+//         return NAN;
+//     }
+    
+//     // check if the input is a square matrix
+//     if (mat->shape[0] != mat->shape[1])
+//     {
+//         printf("Error: Input isn't a square matri but a %ix%i one!\n", mat->shape[0], mat->shape[1]);
+//         return NAN;
+//     }
+
+//     tensor *cloneMat = copyTensor(mat);
+//     if (cloneMat == NULL)
+//     {
+//         printf("Error: Failed to clone input tensor!\n");
+//         return NAN;
+//     }
+    
+//     gaussianElimination(cloneMat, 0, 0);
+// }
+
+
+
+// helper
+void matrixMultiply(tensor *result, const double *data1, const double *data2, int M, int K, int N, int batch)
+{
+    // offset
+    int offsetFirst = batch * M * K; // batch * size of the first matrix
+    int offsetSecond = batch * K * N; // batch * size of the second matrix
+    int offsetResult = batch * M * N; // batch * size of the result matrix
+
+    // matrix multpiplication
+    for (int i = 0; i < M; ++i)
+    {
+        for (int k = 0; k < K; ++k)
+        {
+            for (int j = 0; j < N; ++j)
+            {
+                int indexFirst = offsetFirst + (i * K + k);
+                int indexSecond = offsetSecond + (k * N + j);
+                int indexResult = offsetResult + (i * N + j);
+                result->data[indexResult] += data1[indexFirst] * data2[indexSecond];
+            }
+        }
+    }
+}
