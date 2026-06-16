@@ -249,7 +249,15 @@ double matrixDet(const tensor *mat)
     return  determinant;
 }
 
-
+// tensor *tensorInverse(const tensor *ten)
+// {
+//     // check if the input tensor is valid
+//     if (ten->dimensions < 2)
+//     {
+//         printf("Error: Cannot compute inversion of a rank-%i tensor!\n", ten->dimensions);
+//         return NULL;
+//     }
+// }
 
 // helper
 void matrixMultiplyCore(tensor *result, const double *data1, const double *data2, int M, int K, int N, int batch)

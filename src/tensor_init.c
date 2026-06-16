@@ -115,6 +115,35 @@ void tensorFillZEROS(tensor *ten)
     memset(ten->data, 0, ten->size * sizeof(double));
 }
 
+tensor *createIdentityMatrix(int matSize)
+{
+    if (matSize < 1)
+    {
+        printf("Error: Cannot create an identity matrix of size %i!\n", matSize);
+        return NULL;
+    }
+
+    int resultShape[2] = {matSize, matSize};
+
+    tensor *result = createTensor(2, resultShape);
+    if (result == NULL)
+    {
+        printf("Error: Failed to create identity matrix!\n");
+        return NULL;
+    }
+
+    // clean garbage values
+    tensorFillZEROS(result);
+
+    // assign 1's to the diagonal elements
+    for (int i = 0; i < matSize; ++i)
+    {
+        *(result->data + i * (matSize + 1)) = 1.0;
+    }
+
+    return result;
+}
+
 // assign random values in [0,1) uniformly distributed to a tensor
 void tensorRandomUinformUnity(tensor *ten)
 {

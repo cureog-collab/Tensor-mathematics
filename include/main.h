@@ -17,6 +17,7 @@ typedef struct {
 
 // MEMORY HANDLING =========================================================================================
 tensor *createTensor(int dim, const int *shape);
+tensor *createIdentityMatrix(int matSize);
 tensor *copyTensor(const tensor *ten);
 void destroyTensor(tensor *ten);
 // =========================================================================================================
@@ -40,15 +41,15 @@ tensor *tensorTanh(const tensor *ten);
 // ---------------------------------------------------------------------------------------------------------
 
 tensor *tensorTranspose(const tensor *ten, const int *axes);
-tensor *tensorInverse(const tensor *ten);
+tensor *tensorInverse(const tensor *ten); // TODO
 tensor *tensorMultiply(const tensor *ten1, const tensor *ten2);
 double matrixDet(const tensor *mat);
 
 // ---------------------------------------------------------------------------------------------------------
 
-double tensorSum(const tensor *ten);
-double tensorMean(const tensor *ten);
-tensor *tensorSumByAxis(const tensor *ten, int axis);
+double tensorSum(const tensor *ten); // TODO
+double tensorMean(const tensor *ten); // TODO
+tensor *tensorSumByAxis(const tensor *ten, int axis); // TODO
 
 // ---------------------------------------------------------------------------------------------------------
 
