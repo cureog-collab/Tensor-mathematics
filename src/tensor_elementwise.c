@@ -1,6 +1,5 @@
 #include "../include/main.h"
-
-bool checkShapeSim(const tensor *ten1, const tensor *ten2);
+#include <math.h>
 
 void tensorScale(tensor *ten, double scalar)
 {
@@ -17,53 +16,283 @@ void tensorScale(tensor *ten, double scalar)
 
 tensor *tensorAdd(const tensor *ten1, const tensor *ten2, bool isAdd)
 {
-    if (!checkShapeSim(ten1, ten2))
+    int dims1 = ten1->dimensions;
+    int dims2 = ten2->dimensions;
+    const tensor *ptrToBigTensor = (dims1 > dims2) ? ten1 : ten2;
+    const tensor *ptrToSmallTensor = (dims2 < dims1) ? ten2 : ten1;
+    int maxDims = ptrToBigTensor->dimensions;
+    int dimDiff = maxDims - ptrToSmallTensor->dimensions;
+    int shapeSmallPadded[maxDims];
+    for (int d = 0; d < maxDims; ++d)
     {
-        return NULL;
+        shapeSmallPadded[d] = (d < dimDiff) ? 1 : ptrToSmallTensor->shape[d - dimDiff];
     }
 
-    tensor *result = createTensor(ten1->dimensions, ten1->shape);
+    int resultShape[maxDims];
+    for (int d = 0; d < maxDims; ++d)
+    {
+        int dimBig = ptrToBigTensor->shape[d];
+        int dimSmall = shapeSmallPadded[d];
+        if (dimBig == dimSmall)
+        {
+            resultShape[d] = dimBig;
+        }
+        else if (dimBig == 1)
+        {
+            resultShape[d] = dimSmall;
+        }
+        else if (dimSmall == 1)
+        {
+            resultShape[d] = dimBig;
+        }
+        else
+        {
+            printf("Error: Tensors are not broadcastable!\n");
+            return NULL;
+        }
+    }
+
+    tensor *result = createTensor(maxDims, resultShape);
     if (result == NULL)
     {
         printf("Error: Failed to create result tensor!\n");
         return NULL;
     }
+
     if (isAdd)
     {
-        for (int i = 0; i < ten1->size; ++i)
+        for (int i = 0; i < result->size; ++i)
         {
-            result->data[i] = ten1->data[i] + ten2->data[i];
+            int temp = i;
+            int idxBig = 0;
+            int idxSmall = 0;
+            int jumpBig = 1;
+            int jumpSmall = 1;
+            for (int d = maxDims -1; d >=0; --d)
+            {
+                int coord = temp % resultShape[d];
+                temp /= resultShape[d];
+
+                int coordBig = coord % ptrToBigTensor->shape[d];
+                int coordSmall = coord % shapeSmallPadded[d];
+
+                idxBig += coordBig * jumpBig;
+                idxSmall += coordSmall * jumpSmall;
+
+                jumpBig *= ptrToBigTensor->shape[d];
+                jumpSmall *= shapeSmallPadded[d];
+            }
+            result->data[i] = ptrToBigTensor->data[idxBig] + ptrToSmallTensor->data[idxSmall];
         }
     }
     else
     {
-        for (int i = 0; i < ten1->size; ++i)
+        int minusSign = (dims1 > dims2) ? 1 : -1;
+        for (int i = 0; i < result->size; ++i)
         {
-            result->data[i] = ten1->data[i] - ten2->data[i];
-        }
+            int temp = i;
+            int idxBig = 0;
+            int idxSmall = 0;
+            int jumpBig = 1;
+            int jumpSmall = 1;
+            for (int d = maxDims -1; d >=0; --d)
+            {
+                int coord = temp % resultShape[d];
+                temp /= resultShape[d];
+
+                int coordBig = coord % ptrToBigTensor->shape[d];
+                int coordSmall = coord % shapeSmallPadded[d];
+
+                idxBig += coordBig * jumpBig;
+                idxSmall += coordSmall * jumpSmall;
+
+                jumpBig *= ptrToBigTensor->shape[d];
+                jumpSmall *= shapeSmallPadded[d];
+            }
+            result->data[i] = minusSign * (ptrToBigTensor->data[idxBig] - ptrToSmallTensor->data[idxSmall]);
+        }   
     }
 
     return result;
 }
 
-tensor *tensorHadamardProduct(const tensor *ten1, const tensor *ten2)
+tensor *tensorAddBias(const tensor *ten, const tensor *bias);
+
+tensor *tensorDivide(const tensor *ten1, const tensor *ten2)
 {
-    if (!checkShapeSim(ten1, ten2))
+    int dims1 = ten1->dimensions;
+    int dims2 = ten2->dimensions;
+    const tensor *ptrToBigTensor = (dims1 > dims2) ? ten1 : ten2;
+    const tensor *ptrToSmallTensor = (dims2 < dims1) ? ten2 : ten1;
+    int maxDims = ptrToBigTensor->dimensions;
+    int dimDiff = maxDims - ptrToSmallTensor->dimensions;
+    int shapeSmallPadded[maxDims];
+    for (int d = 0; d < maxDims; ++d)
     {
-        return NULL;
+        shapeSmallPadded[d] = (d < dimDiff) ? 1 : ptrToSmallTensor->shape[d - dimDiff];
     }
-    
-    tensor *result = createTensor(ten1->dimensions, ten1->shape);
+
+    int resultShape[maxDims];
+    for (int d = 0; d < maxDims; ++d)
+    {
+        int dimBig = ptrToBigTensor->shape[d];
+        int dimSmall = shapeSmallPadded[d];
+        if (dimBig == dimSmall)
+        {
+            resultShape[d] = dimBig;
+        }
+        else if (dimBig == 1)
+        {
+            resultShape[d] = dimSmall;
+        }
+        else if (dimSmall == 1)
+        {
+            resultShape[d] = dimBig;
+        }
+        else
+        {
+            printf("Error: Tensors are not broadcastable!\n");
+            return NULL;
+        }
+    }
+
+    tensor *result = createTensor(maxDims, resultShape);
     if (result == NULL)
     {
         printf("Error: Failed to create result tensor!\n");
         return NULL;
     }
-    for (int i = 0; i < ten1->size; ++i)
+
+    bool isTen1Bigger = dims1 > dims2;
+    if (isTen1Bigger)
     {
-        result->data[i] = ten1->data[i] * ten2->data[i];
+        for (int i = 0; i < result->size; ++i)
+        {
+            int temp = i;
+            int idxBig = 0;
+            int idxSmall = 0;
+            int jumpBig = 1;
+            int jumpSmall = 1;
+            for (int d = maxDims -1; d >=0; --d)
+            {
+                int coord = temp % resultShape[d];
+                temp /= resultShape[d];
+
+                int coordBig = coord % ptrToBigTensor->shape[d];
+                int coordSmall = coord % shapeSmallPadded[d];
+
+                idxBig += coordBig * jumpBig;
+                idxSmall += coordSmall * jumpSmall;
+
+                jumpBig *= ptrToBigTensor->shape[d];
+                jumpSmall *= shapeSmallPadded[d];
+            }
+
+            double valBig = ptrToBigTensor->data[idxBig];
+            double valSmall = ptrToSmallTensor->data[idxSmall];
+            result->data[i] = valBig / (valSmall + EPSILON);
+        }
+    }
+    else  
+    {
+        for (int i = 0; i < result->size; ++i)
+        {
+            int temp = i;
+            int idxBig = 0;
+            int idxSmall = 0;
+            int jumpBig = 1;
+            int jumpSmall = 1;
+            for (int d = maxDims -1; d >=0; --d)
+            {
+                int coord = temp % resultShape[d];
+                temp /= resultShape[d];
+
+                int coordBig = coord % ptrToBigTensor->shape[d];
+                int coordSmall = coord % shapeSmallPadded[d];
+
+                idxBig += coordBig * jumpBig;
+                idxSmall += coordSmall * jumpSmall;
+
+                jumpBig *= ptrToBigTensor->shape[d];
+                jumpSmall *= shapeSmallPadded[d];
+            }
+
+            double valBig = ptrToBigTensor->data[idxBig];
+            double valSmall = ptrToSmallTensor->data[idxSmall];
+            result->data[i] = valSmall / (valBig + EPSILON);
+        }
+    }
+    return result;
+}
+
+tensor *tensorHadamardProduct(const tensor *ten1, const tensor *ten2)
+{
+    int dims1 = ten1->dimensions;
+    int dims2 = ten2->dimensions;
+    const tensor *ptrToBigTensor = (dims1 > dims2) ? ten1 : ten2;
+    const tensor *ptrToSmallTensor = (dims2 < dims1) ? ten2 : ten1;
+    int maxDims = ptrToBigTensor->dimensions;
+    int dimDiff = maxDims - ptrToSmallTensor->dimensions;
+    int shapeSmallPadded[maxDims];
+    for (int d = 0; d < maxDims; ++d)
+    {
+        shapeSmallPadded[d] = (d < dimDiff) ? 1 : ptrToSmallTensor->shape[d - dimDiff];
     }
 
+    int resultShape[maxDims];
+    for (int d = 0; d < maxDims; ++d)
+    {
+        int dimBig = ptrToBigTensor->shape[d];
+        int dimSmall = shapeSmallPadded[d];
+        if (dimBig == dimSmall)
+        {
+            resultShape[d] = dimBig;
+        }
+        else if (dimBig == 1)
+        {
+            resultShape[d] = dimSmall;
+        }
+        else if (dimSmall == 1)
+        {
+            resultShape[d] = dimBig;
+        }
+        else
+        {
+            printf("Error: Tensors are not broadcastable!\n");
+            return NULL;
+        }
+    }
+
+    tensor *result = createTensor(maxDims, resultShape);
+    if (result == NULL)
+    {
+        printf("Error: Failed to create result tensor!\n");
+        return NULL;
+    }
+
+    for (int i = 0; i < result->size; ++i)
+    {
+        int temp = i;
+        int idxBig = 0;
+        int idxSmall = 0;
+        int jumpBig = 1;
+        int jumpSmall = 1;
+        for (int d = maxDims -1; d >=0; --d)
+        {
+            int coord = temp % resultShape[d];
+            temp /= resultShape[d];
+
+            int coordBig = coord % ptrToBigTensor->shape[d];
+            int coordSmall = coord % shapeSmallPadded[d];
+
+            idxBig += coordBig * jumpBig;
+            idxSmall += coordSmall * jumpSmall;
+
+            jumpBig *= ptrToBigTensor->shape[d];
+            jumpSmall *= shapeSmallPadded[d];
+        }
+        result->data[i] = ptrToBigTensor->data[idxBig] * ptrToSmallTensor->data[idxSmall];
+    }
     return result;
 }
 
@@ -115,7 +344,60 @@ tensor *tensorTanh(const tensor *ten)
     return result;
 }
 
-// helper:
+tensor *tensorReluDerivative(const tensor *ten)
+{
+    tensor *result = createTensor(ten->dimensions, ten->shape);
+    if (result == NULL)
+    {
+        printf("Error: Failed to create result tensor!\n");
+        return NULL;
+    }
+
+    for (int i = 0; i < ten->size; ++i)
+    {
+        result->data[i] = (ten->data[i] > 0) ? 1.0 : 0;
+    }
+
+    return result;
+}
+
+tensor *tensorSigmoidDerivative(const tensor *ten)
+{
+    tensor *result = createTensor(ten->dimensions, ten->shape);
+    if (result == NULL)
+    {
+        printf("Error: Failed to create result tensor!\n");
+        return NULL;
+    }
+
+    for (int i = 0; i < ten->size; ++i)
+    {
+        double value = ten->data[i];
+        result->data[i] = value * (1.0 - value);
+    }
+
+    return result;
+}
+
+tensor *tensorTanhDerivative(const tensor *ten)
+{
+    tensor *result = createTensor(ten->dimensions, ten->shape);
+    if (result == NULL)
+    {
+        printf("Error: Failed to create result tensor!\n");
+        return NULL;
+    }
+
+    for (int i = 0; i < ten->size; ++i)
+    {
+        double value = ten->data[i];
+        result->data[i] = 1.0 - value * value;
+    }
+
+    return result;
+}
+
+// helper
 // check if the two tensors are the same shape
 bool checkShapeSim(const tensor *ten1, const tensor *ten2)
 {

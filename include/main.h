@@ -2,60 +2,90 @@
 #define MAIN_H
 
 #include <math.h>
+#include <float.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+#define EPSILON 1E-9
+
 typedef struct {
-    double *data; // actual data stored
-    int *shape; // store the size of each dimension of the tensor
-    int dimensions; // dimension of the tensor
-    int size; // total components from every dimension
+    double *data;
+    int *shape;
+    int dimensions;
+    int size;
 } tensor;
 
-// MEMORY HANDLING =========================================================================================
+// =========================================================================================================
+// MEMORY HANDLING 
+// =========================================================================================================
 tensor *createTensor(int dim, const int *shape);
 tensor *createIdentityMatrix(int matSize);
 tensor *copyTensor(const tensor *ten);
 void destroyTensor(tensor *ten);
-// =========================================================================================================
 
-// TENSOR OPERATORS ========================================================================================
+// =========================================================================================================
+// TENSOR INITIALIZATION
+// =========================================================================================================
 void tensorFill(tensor *ten, double A);
 void tensorFillZEROS(tensor *ten);
 void tensorFillONES(tensor *ten);
-void tensorRandomUinformUnity(tensor *ten);
+void tensorRandomUniformUnity(tensor *ten); 
 void tensorRandomNormal(tensor *ten, double mean, double sigma);
 
-// ---------------------------------------------------------------------------------------------------------
-
+// =========================================================================================================
+// ELEMENT-WISE MATHEMATICS & FORWARD PASS
+// =========================================================================================================
 void tensorScale(tensor *ten, double scalar);
 tensor *tensorAdd(const tensor *ten1, const tensor *ten2, bool isAdd);
+tensor *tensorAddBias(const tensor *ten, const tensor *bias); // TODO
 tensor *tensorHadamardProduct(const tensor *ten1, const tensor *ten2);
+tensor *tensorDivide(const tensor *ten1, const tensor *ten2);
+
 tensor *tensorRelu(const tensor *ten);
 tensor *tensorSigmoid(const tensor *ten);
 tensor *tensorTanh(const tensor *ten);
+tensor *tensorSoftmax(const tensor *ten, int axis); // TODO
 
-// ---------------------------------------------------------------------------------------------------------
+bool checkShapeSim(const tensor *ten1, const tensor *ten2);
 
+// =========================================================================================================
+// BACKPROPAGATION
+// =========================================================================================================
+tensor *tensorReluDerivative(const tensor *ten);
+tensor *tensorSigmoidDerivative(const tensor *ten);
+tensor *tensorTanhDerivative(const tensor *ten);
+
+// =========================================================================================================
+// LOSS FUNCTIONS
+// =========================================================================================================
+double tensorMSE(const tensor *predictions, const tensor *labels); // TODO
+double tensorCrossEntropy(const tensor *predictions, const tensor *labels); // TODO
+
+// =========================================================================================================
+// LINEAR ALGEBRA CORE
+// =========================================================================================================
 tensor *tensorTranspose(const tensor *ten, const int *axes);
 tensor *tensorInverse(const tensor *ten);
-tensor *tensorMultiply(const tensor *ten1, const tensor *ten2);
+tensor *tensorMultiply(const tensor *ten1, const tensor *ten2, bool trans1, bool trans2);
 double matrixDet(const tensor *mat);
 void gaussianElimination(tensor *mat, int entryRowIdx, int entryColIdx, int *swapSign);
 
-// ---------------------------------------------------------------------------------------------------------
-
-double tensorSum(const tensor *ten); // TODO
-double tensorMean(const tensor *ten); // TODO
+// =========================================================================================================
+// REDUCTION & STATISTICS
+// =========================================================================================================
+double tensorSum(const tensor *ten);
+double tensorMean(const tensor *ten);
 tensor *tensorSumByAxis(const tensor *ten, int axis); // TODO
+tensor *tensorMaxByAxis(const tensor *ten, int axis); // TODO
+tensor *tensorArgmax(const tensor *ten, int axis);    // TODO
 
-// ---------------------------------------------------------------------------------------------------------
-
+// =========================================================================================================
+// SHAPE MORPHING
+// =========================================================================================================
 tensor *tensorReshape(const tensor *ten, int *newShape, int newDim);
 tensor *tensorFlatten(const tensor *ten);
-// =========================================================================================================
 
 #endif

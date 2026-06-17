@@ -3,7 +3,7 @@
 #include <string.h>
 #include <time.h>
 
-void matrixMultiplyCore(tensor *result, const double *data1, const double *data2, int M, int K, int N, int batch);
+void matrixMultiplyCore(tensor *result, const double *data1, const double *data2, int M, int K, int N, int batch, bool trans1, bool trans2);
 static void gaussianEliminationCore(tensor *mat, int entryRowIdx, int entryColIdx, int *swapSign);
 static bool gaussJordanCore(tensor *augMat, int matSize, int augCols, int entryIdx);
 
@@ -82,7 +82,7 @@ tensor *tensorTranspose(const tensor *ten, const int *axes)
     return result;
 }
 
-tensor *tensorMultiply(const tensor *ten1, const tensor *ten2)
+tensor *tensorMultiply(const tensor *ten1, const tensor *ten2, bool trans1, bool trans2)
 {
     // ten1->shape: {10, 5, 3, 4}
     // to be multiplicable: ten2->shape: {10, 5, 4, int N}
@@ -112,16 +112,16 @@ tensor *tensorMultiply(const tensor *ten1, const tensor *ten2)
     }
 
     // obtain the actual dimensionality of the will-be-multiplied matrices
-    int firstCols = ten1->shape[dims - 1];
-    int secondRows = ten2->shape[dims - 2];
+    int firstRows  = (trans1) ? ten1->shape[dims - 1] : ten1->shape[dims - 2];
+    int firstCols  = (trans1) ? ten1->shape[dims - 2] : ten1->shape[dims - 1];
+    
+    int secondRows = (trans2) ? ten2->shape[dims - 1] : ten2->shape[dims - 2];
+    int secondCols = (trans2) ? ten2->shape[dims - 2] : ten2->shape[dims - 1];
     if (secondRows != firstCols)
     {
-        printf("Error: matrices not multiplicable!\n");
+        printf("Error: Matrices not multiplicable! (%dx%d and %dx%d)\n", firstRows, firstCols, secondRows, secondCols);
         return NULL;
     }
-    int firstRows = ten1->shape[dims - 2];
-    int secondCols = ten2->shape[dims - 1];
-    
     // resultShape
     int *resultShape = malloc(dims * sizeof(int));
     if (resultShape == NULL)
@@ -129,10 +129,11 @@ tensor *tensorMultiply(const tensor *ten1, const tensor *ten2)
         printf("Error: Failed to malloc for resultShape!\n");
         return NULL;
     }
-    for (int i = 0; i < dims - 1; ++i)
+    for (int i = 0; i < dims - 2; ++i)
     {
         resultShape[i] = ten1->shape[i];
     }
+    resultShape[dims - 2] = firstRows;
     resultShape[dims - 1] = secondCols;
     
     tensor *result = createTensor(dims, resultShape);
@@ -156,7 +157,7 @@ tensor *tensorMultiply(const tensor *ten1, const tensor *ten2)
     // multiply each pair of matrices
     for (int b = 0; b < totBatches; ++b)
     {
-        matrixMultiplyCore(result, ten1->data, ten2->data, firstRows, firstCols, secondCols, b);
+        matrixMultiplyCore(result, ten1->data, ten2->data, firstRows, firstCols, secondCols, b, trans1, trans2);
     }
     return result;
 }
@@ -334,26 +335,88 @@ void gaussianElimination(tensor *mat, int entryRowIdx, int entryColIdx, int *swa
 }
 
 // helper
-void matrixMultiplyCore(tensor *result, const double *data1, const double *data2, int M, int K, int N, int batch)
+void matrixMultiplyCore(tensor *result, const double *data1, const double *data2, int M, int K, int N, int batch, bool trans1, bool trans2)
 {
     // offset
     int offsetFirst = batch * M * K; // batch * size of the first matrix
     int offsetSecond = batch * K * N; // batch * size of the second matrix
     int offsetResult = batch * M * N; // batch * size of the result matrix
 
-    // matrix multpiplication
-    for (int i = 0; i < M; ++i)
+    if (!trans1 && !trans2)
     {
-        for (int k = 0; k < K; ++k)
+        for (int i = 0; i < M; ++i)
         {
-            for (int j = 0; j < N; ++j)
+            int firstBase = offsetFirst + i * K;
+            int resultBase = offsetResult + i * N;
+            for (int k = 0; k < K; ++k)
             {
-                int indexFirst = offsetFirst + (i * K + k);
-                int indexSecond = offsetSecond + (k * N + j);
-                int indexResult = offsetResult + (i * N + j);
-                result->data[indexResult] += data1[indexFirst] * data2[indexSecond];
+                int indexFirst = firstBase + k;
+                int secondBase = offsetSecond + k * N;
+                for (int j = 0; j < N; ++j)
+                {
+                    int indexSecond = secondBase + j;
+                    int indexResult = resultBase + j;
+                    result->data[indexResult] += data1[indexFirst] * data2[indexSecond];
+                }
             }
         }
+    }
+    else if (trans1 && !trans2)
+    {
+        for (int i = 0; i < M; ++i)
+        {
+            int firstBase = offsetFirst + i;
+            int resultBase = offsetResult + i * N;
+            for (int k = 0; k < K; ++k)
+            {
+                int secondBase = offsetSecond + k * N;
+                int indexFirst = firstBase + k * M;
+                for (int j = 0; j < N; ++j)
+                {
+                    int indexSecond = secondBase + j;
+                    int indexResult = resultBase + j;
+                    result->data[indexResult] += data1[indexFirst] * data2[indexSecond];
+                }
+            }
+        }
+    }
+    else if (!trans1 && trans2)
+    {
+        for (int i = 0; i < M; ++i)
+        {
+            int firstBase = offsetFirst + i * K;
+            int resultBase = offsetResult + i * N;
+            for (int k = 0; k < K; ++k)
+            {
+                int secondBase = offsetSecond + k;
+                int indexFirst = firstBase + k;
+                for (int j = 0; j < N; ++j)
+                {
+                    int indexSecond = secondBase + j * K;
+                    int indexResult = resultBase + j;
+                    result->data[indexResult] += data1[indexFirst] * data2[indexSecond];
+                }
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < M; ++i)
+        {
+            int firstBase = offsetFirst + i;
+            int resultBase = offsetResult + i * N;
+            for (int k = 0; k < K; ++k)
+            {
+                int secondBase = offsetSecond + k;
+                int indexFirst = firstBase + k * M;
+                for (int j = 0; j < N; ++j)
+                {
+                    int indexSecond = secondBase + j * K;
+                    int indexResult = resultBase + j;
+                    result->data[indexResult] += data1[indexFirst] * data2[indexSecond];
+                }
+            }
+        }        
     }
 }
 

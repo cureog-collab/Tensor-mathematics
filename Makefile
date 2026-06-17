@@ -9,7 +9,7 @@ BUILD_DIR = build
 
 TARGET = $(BUILD_DIR)/tensor-maths
 
-SRC = $(SRC_DIR)/main.c $(SRC_DIR)/tensor_elementwise.c $(SRC_DIR)/tensor_init.c $(SRC_DIR)/tensor_linearAlg.c $(SRC_DIR)/tensor_reduction.c $(SRC_DIR)/tensor_utils.c
+SRC = $(SRC_DIR)/main.c $(SRC_DIR)/tensor_elementwise.c $(SRC_DIR)/tensor_loss.c $(SRC_DIR)/tensor_init.c $(SRC_DIR)/tensor_linearAlg.c $(SRC_DIR)/tensor_reduction.c $(SRC_DIR)/tensor_utils.c
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 DEPS = $(OBJS:.o=.d)
 
