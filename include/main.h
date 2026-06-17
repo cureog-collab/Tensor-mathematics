@@ -41,9 +41,10 @@ tensor *tensorTanh(const tensor *ten);
 // ---------------------------------------------------------------------------------------------------------
 
 tensor *tensorTranspose(const tensor *ten, const int *axes);
-tensor *tensorInverse(const tensor *ten); // TODO
+tensor *tensorInverse(const tensor *ten);
 tensor *tensorMultiply(const tensor *ten1, const tensor *ten2);
 double matrixDet(const tensor *mat);
+void gaussianElimination(tensor *mat, int entryRowIdx, int entryColIdx, int *swapSign);
 
 // ---------------------------------------------------------------------------------------------------------
 
@@ -55,7 +56,6 @@ tensor *tensorSumByAxis(const tensor *ten, int axis); // TODO
 
 tensor *tensorReshape(const tensor *ten, int *newShape, int newDim);
 tensor *tensorFlatten(const tensor *ten);
-void gaussianElimination(tensor *mat, int entryRowIdx, int entryColIdx, int *swapSign);
 // =========================================================================================================
 
 #endif
