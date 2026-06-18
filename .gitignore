@@ -1,7 +1,11 @@
 c_tensor
 tensor-mathematics
 *.o
+*.a
+*.d
 tests/
 obj/
 lib/
+bin/
+run_test
 .DS_Store
