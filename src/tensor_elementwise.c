@@ -728,6 +728,49 @@ bool tensorAddScalarInPlace(tensor *ten, double scalar)
     return true;
 }
 
+bool tensorAddInPlace(tensor *replaceTen, const tensor *constTen, bool isAdd)
+{
+    if (replaceTen == NULL || constTen == NULL)
+    {
+        printf("Error: Cannot perform AddInPlace with NULL tensors!\n");
+        return false;
+    }
+    if (replaceTen->size != constTen->size || replaceTen->dimensions != constTen->dimensions)
+    {
+        printf("Error: InPlace operations require identical shapes!\n");
+        return false;
+    }
+    for (int d = 0; d < replaceTen->dimensions; ++d)
+    {
+        if (replaceTen->shape[d] != constTen->shape[d])
+        {
+            printf("Error: InPlace operations require identical shapes!\n");
+            return false;
+        }
+    }
+
+    double *destData = replaceTen->data;
+    double *srcData = constTen->data;
+    int totalElements = replaceTen->size;
+
+    if (isAdd)
+    {
+        for (int i = 0; i < totalElements; ++i)
+        {
+            destData[i] += srcData[i];
+        }
+    }
+    else
+    {
+        for (int i = 0; i < totalElements; ++i)
+        {
+            destData[i] -= srcData[i];
+        }
+    }
+
+    return true;
+}
+
 // ==========================================================================================
 // HELPERS
 
